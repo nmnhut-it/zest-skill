@@ -46,15 +46,19 @@ semgrep --version          # Should show 1.151.0+
 <details>
 <summary><strong>Windows PATH Issue (click to expand)</strong></summary>
 
-Sau khi `pip install semgrep`, executable không tự động trong PATH:
+After `pip install semgrep`, the executable may not be in PATH. Auto-fix:
+
+```bash
+# Bash/Git Bash (Windows) - auto-detect Scripts path and add to PATH
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
 
 ```powershell
-# Add to PATH trong PowerShell session
-$env:PATH += ";$env:LOCALAPPDATA\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\Scripts"
-
-# Hoặc chạy qua Python
-python -c "import subprocess; subprocess.run(['semgrep', '--version'])"
+# PowerShell - auto-detect and add to PATH
+$env:PATH += ";$(python -c "import subprocess; r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True); loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0]; print(loc.replace('site-packages','Scripts'))")"
 ```
+
+Or use helper scripts: `scripts/find-semgrep.bat run --version`
 
 </details>
 

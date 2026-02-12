@@ -46,43 +46,45 @@ java -version 2>&1 | head -1
 
 ### 2.1 Semgrep (Cross-platform, no Java needed)
 
-**Preferred - works everywhere:**
+**Install:**
 ```bash
-# Python pip (recommended)
 pip install semgrep
-
-# Windows với pip không có
-python -m pip install semgrep
-
-# Mac
-brew install semgrep
-
-# Linux
-pip3 install semgrep
-
-# Docker (if all else fails)
-docker pull returntocorp/semgrep
 ```
 
-**IMPORTANT - Windows PATH Issue:**
+**IMPORTANT - Auto-detect semgrep path (LLM-friendly):**
+
+Step 1: Check if semgrep works directly
+```bash
+semgrep --version
+```
+
+Step 2: If "command not found", find path using Python one-liner:
+```bash
+# Get Scripts directory path
+python -c "import subprocess; r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True); loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0]; print(loc.replace('site-packages','Scripts'))"
+```
+
+Step 3: Add to PATH for current session:
+```bash
+# Bash/Git Bash (Windows) - run this ONCE at start of session
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
+
 ```powershell
-# Sau khi pip install, semgrep.exe nằm ở:
-# %LOCALAPPDATA%\Packages\PythonSoftwareFoundation.Python.3.12_xxx\LocalCache\local-packages\Python312\Scripts\
+# PowerShell
+$env:PATH += ";$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];print(loc.replace('site-packages','Scripts'))")"
+```
 
-# Option 1: Add to PATH trong session
-$env:PATH += ";$env:LOCALAPPDATA\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\Scripts"
-
-# Option 2: Bash/Git Bash - export PATH
-export PATH="$PATH:/c/Users/$USER/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0/LocalCache/local-packages/Python312/Scripts"
-
-# Option 3: Chạy qua Python subprocess (always works)
-python -c "import subprocess; subprocess.run(['semgrep', '--version'])"
+**Alternative - Use helper script:**
+```bash
+# Windows: scripts/find-semgrep.bat run --version
+# Unix:    scripts/find-semgrep.sh run --version
 ```
 
 **Verify:**
 ```bash
 semgrep --version
-# Expected: 1.151.0 hoặc mới hơn
+# Expected: 1.151.0+
 ```
 
 ### 2.2 SpotBugs Standalone (No Maven needed)
@@ -368,13 +370,22 @@ Not available: SpotBugs (no .class files)
 ## Troubleshooting
 
 ### "semgrep: command not found" (Windows)
+
+**Quick fix - Add to PATH automatically:**
+```bash
+# Bash/Git Bash (Windows)
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
+
 ```powershell
-# Semgrep installed nhưng không trong PATH
-# Solution: Add Scripts folder to PATH
-$scriptsPath = Get-ChildItem -Path "$env:LOCALAPPDATA\Packages" -Filter "PythonSoftwareFoundation.Python*" -Directory |
-    Select-Object -First 1 |
-    ForEach-Object { Join-Path $_.FullName "LocalCache\local-packages\Python312\Scripts" }
-$env:PATH += ";$scriptsPath"
+# PowerShell
+$env:PATH += ";$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];print(loc.replace('site-packages','Scripts'))")"
+```
+
+**Or use helper script:**
+```bash
+scripts/find-semgrep.bat run --version   # Windows
+scripts/find-semgrep.sh run --version    # Unix
 ```
 
 ### "pmd.bat: command not found"
