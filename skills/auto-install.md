@@ -10,6 +10,17 @@ Tự động detect và cài đặt static analysis tools, không phụ thuộc 
 
 ---
 
+## Step 0: Windows PATH Setup (REQUIRED)
+
+**Run this FIRST before any semgrep command (Windows/Git Bash only):**
+```bash
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
+
+This adds pip's Scripts directory to PATH so semgrep can find pysemgrep.
+
+---
+
 ## Step 1: Detect Environment
 
 ### 1.1 Detect OS
@@ -51,41 +62,13 @@ java -version 2>&1 | head -1
 pip install semgrep
 ```
 
-**IMPORTANT - Auto-detect semgrep path (LLM-friendly):**
-
-Step 1: Check if semgrep works directly
-```bash
-semgrep --version
-```
-
-Step 2: If "command not found", find path using Python one-liner:
-```bash
-# Get Scripts directory path
-python -c "import subprocess; r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True); loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0]; print(loc.replace('site-packages','Scripts'))"
-```
-
-Step 3: Add to PATH for current session:
-```bash
-# Bash/Git Bash (Windows) - run this ONCE at start of session
-export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
-```
-
-```powershell
-# PowerShell
-$env:PATH += ";$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];print(loc.replace('site-packages','Scripts'))")"
-```
-
-**Alternative - Use helper script:**
-```bash
-# Windows: skills/find-semgrep.bat run --version
-# Unix:    skills/find-semgrep.sh run --version
-```
-
-**Verify:**
+**Verify (after running Step 0 PATH setup):**
 ```bash
 semgrep --version
 # Expected: 1.151.0+
 ```
+
+> Note: On Windows, you MUST run Step 0 PATH setup first, otherwise semgrep will fail with "pysemgrep not found".
 
 ### 2.2 SpotBugs Standalone (No Maven needed)
 
@@ -369,24 +352,9 @@ Not available: SpotBugs (no .class files)
 
 ## Troubleshooting
 
-### "semgrep: command not found" (Windows)
+### "semgrep: command not found" or "pysemgrep not found" (Windows)
 
-**Quick fix - Add to PATH automatically:**
-```bash
-# Bash/Git Bash (Windows)
-export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
-```
-
-```powershell
-# PowerShell
-$env:PATH += ";$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];print(loc.replace('site-packages','Scripts'))")"
-```
-
-**Or use helper script:**
-```bash
-skills/find-semgrep.bat run --version   # Windows
-skills/find-semgrep.sh run --version    # Unix
-```
+**Solution:** Run Step 0 PATH setup at the top of this file first.
 
 ### "pmd.bat: command not found"
 ```bash
