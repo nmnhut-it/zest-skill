@@ -4,13 +4,9 @@
 
 | Trigger | Skill File | Description |
 |---------|-----------|-------------|
-| "setup tools", "install" | `skills/auto-install.md` | Auto-install PMD (no Maven needed) |
-| "boost", "thorough review", "deep check" | `skills/code-quality-booster.md` | AdaBoost iterative analysis |
-| "review code", "check quality" | `skills/code-review.md` | Static + AI review |
-| "review test", "check test" | `skills/test-review.md` | Test code review |
-| "generate test", "write test" | `skills/test-generation.md` | JUnit 5 test gen |
-| "security scan", "owasp" | `skills/security-audit.md` | Security audit |
-| "evaluate test", "test quality" | `skills/test-evaluation.md` | Test quality check |
+| "review code" | `skills/code-review.md` | Review code với PMD, Semgrep + AI |
+| "review test" | `skills/test-review.md` | Đánh giá chất lượng test |
+| "generate test" | `skills/test-generation.md` | Sinh test JUnit 5 |
 
 ## Experience (Project-specific)
 
