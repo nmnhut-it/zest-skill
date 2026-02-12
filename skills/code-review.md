@@ -65,6 +65,7 @@ get_file_problems(<file_path>)
 - [ ] Unsafe deserialization
 - [ ] Missing input validation
 - [ ] Sensitive data trong logs
+- [ ] **Các security issues khác** phát hiện được trong code
 
 **→ Ghi nhận:** Lines có security issues.
 
@@ -81,6 +82,7 @@ get_file_problems(<file_path>)
 - [ ] Optional usage đúng cách
 - [ ] Race conditions trong shared state
 - [ ] Error handling: catch specific, không empty
+- [ ] **Các logic issues khác** phát hiện được trong code
 
 **→ Ghi nhận:** Lines có logic issues.
 
@@ -96,6 +98,7 @@ get_file_problems(<file_path>)
 - [ ] Object creation trong loops
 - [ ] String concat trong loops (`+=`)
 - [ ] Blocking I/O trong async context
+- [ ] **Các resource/performance issues khác** phát hiện được trong code
 
 **→ Ghi nhận:** Lines có resource/perf issues.
 
@@ -124,6 +127,7 @@ GOOD: Scene → Controller → Services → Model (rõ ràng)
 | Hallucinated APIs | Unresolved references |
 | Over-engineering | Interface với 1 impl |
 | Magic Numbers | Hardcoded values |
+| **Khác** | Các design issues khác phát hiện được |
 
 ---
 
@@ -133,6 +137,7 @@ GOOD: Scene → Controller → Services → Model (rõ ràng)
 - [ ] Log cả success VÀ error
 - [ ] Error codes rõ ràng
 - [ ] Không log sensitive data
+- [ ] **Các logging issues khác** phát hiện được
 
 ```java
 // BAD
