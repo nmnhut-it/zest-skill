@@ -31,14 +31,34 @@ When user asks for code review, read and follow:
 ### Install Analysis Tools
 
 ```bash
-# Minimum requirement (recommended)
+# 1. Semgrep (required)
 pip install semgrep
 
-# Test
-semgrep --version
+# 2. PMD standalone (recommended - no Maven needed)
+curl -L -o pmd.zip https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.0.0/pmd-dist-7.0.0-bin.zip
+unzip pmd.zip -d ./tools/
+
+# 3. Verify
+semgrep --version          # Should show 1.151.0+
+./tools/pmd-bin-7.0.0/bin/pmd --version  # PMD 7.0.0
 ```
 
-> **Note**: LLM sẽ tự cài tools khác nếu cần theo `auto-install.md`
+<details>
+<summary><strong>Windows PATH Issue (click to expand)</strong></summary>
+
+Sau khi `pip install semgrep`, executable không tự động trong PATH:
+
+```powershell
+# Add to PATH trong PowerShell session
+$env:PATH += ";$env:LOCALAPPDATA\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\Scripts"
+
+# Hoặc chạy qua Python
+python -c "import subprocess; subprocess.run(['semgrep', '--version'])"
+```
+
+</details>
+
+> **Note**: LLM sẽ tự cài tools nếu cần theo `auto-install.md`
 
 ---
 
@@ -69,28 +89,29 @@ npm run build
 npm start
 ```
 
-## Auto-Install Dependencies
+## Supported Tools
 
-Skill tự động cài đặt các dependencies cần thiết:
+| Tool | Purpose | Install | Needs Compile |
+|------|---------|---------|---------------|
+| **Semgrep** | Security + patterns | `pip install semgrep` | No |
+| **PMD** | Code style + best practices | Download zip | No |
+| **CPD** (included in PMD) | Duplicate code detection | Included | No |
+| SpotBugs | Bug patterns | Download zip | Yes (.class) |
+| FindSecBugs | Security (SpotBugs plugin) | Download jar | Yes |
 
-| Tool | Install Method |
-|------|---------------|
-| SpotBugs | Maven/Gradle plugin |
-| PMD | Maven/Gradle plugin |
-| Semgrep | cURL + pip |
-| JaCoCo | Maven/Gradle plugin |
-| FindSecBugs | Maven plugin |
+### CPD - Copy-Paste Detector (AI Code Smell!)
+
+PMD bao gồm CPD - detect duplicate code, đặc biệt hữu ích cho AI-generated code:
 
 ```bash
-# Maven - thêm vào pom.xml tự động
-mvn spotbugs:check
+# Detect duplicate code (minimum 100 tokens)
+./tools/pmd-bin-7.0.0/bin/pmd cpd --minimum-tokens 100 -d ./src --language java
 
-# Gradle - thêm vào build.gradle tự động
-gradle spotbugsMain
-
-# Semgrep - cài qua curl
-curl -sSL https://semgrep.dev/install.sh | sh
+# Output to file
+./tools/pmd-bin-7.0.0/bin/pmd cpd --minimum-tokens 50 -d ./src --language java --format csv > cpd-report.csv
 ```
+
+**Supported languages:** Java, JavaScript, TypeScript, Python, Go, C/C++, C#, Kotlin, Swift, Ruby, PHP, Scala, và 20+ ngôn ngữ khác.
 
 ## IntelliJ MCP Server Setup
 

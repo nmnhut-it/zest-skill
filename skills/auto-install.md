@@ -64,9 +64,25 @@ pip3 install semgrep
 docker pull returntocorp/semgrep
 ```
 
+**IMPORTANT - Windows PATH Issue:**
+```powershell
+# Sau khi pip install, semgrep.exe nằm ở:
+# %LOCALAPPDATA%\Packages\PythonSoftwareFoundation.Python.3.12_xxx\LocalCache\local-packages\Python312\Scripts\
+
+# Option 1: Add to PATH trong session
+$env:PATH += ";$env:LOCALAPPDATA\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\Scripts"
+
+# Option 2: Bash/Git Bash - export PATH
+export PATH="$PATH:/c/Users/$USER/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0/LocalCache/local-packages/Python312/Scripts"
+
+# Option 3: Chạy qua Python subprocess (always works)
+python -c "import subprocess; subprocess.run(['semgrep', '--version'])"
+```
+
 **Verify:**
 ```bash
 semgrep --version
+# Expected: 1.151.0 hoặc mới hơn
 ```
 
 ### 2.2 SpotBugs Standalone (No Maven needed)
@@ -111,6 +127,15 @@ unzip pmd.zip -d ./tools/
 
 # Unix/Mac
 ./tools/pmd-bin-7.0.0/bin/pmd check -d ./src -R rulesets/java/quickstart.xml -f json
+```
+
+**Run CPD (Copy-Paste Detector - included in PMD):**
+```bash
+# Detect duplicate code - great for AI-generated code smell!
+./tools/pmd-bin-7.0.0/bin/pmd.bat cpd --minimum-tokens 50 -d ./src --language java
+
+# Supports 25+ languages: java, javascript, typescript, python, go, cpp, csharp, kotlin, swift...
+./tools/pmd-bin-7.0.0/bin/pmd.bat cpd --minimum-tokens 50 -d ./src --language typescript
 ```
 
 ### 2.4 Checkstyle Standalone
@@ -245,15 +270,16 @@ grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.java"
 
 ## Tool Comparison (No Maven)
 
-| Tool | Needs Java | Needs Compile | Install Method |
-|------|------------|---------------|----------------|
-| Semgrep | No | No | pip install |
-| PMD | Yes (runtime) | No | curl + unzip |
-| SpotBugs | Yes | Yes (.class) | curl + unzip |
-| Checkstyle | Yes | No | curl jar |
-| Grep patterns | No | No | Built-in |
+| Tool | Needs Java | Needs Compile | Install Method | Best For |
+|------|------------|---------------|----------------|----------|
+| Semgrep | No | No | pip install | Security, patterns |
+| PMD | Yes (runtime) | No | curl + unzip | Code style, best practices |
+| CPD | Yes (in PMD) | No | Included in PMD | Duplicate detection |
+| SpotBugs | Yes | Yes (.class) | curl + unzip | Bug patterns |
+| Checkstyle | Yes | No | curl jar | Code formatting |
+| Grep patterns | No | No | Built-in | Basic search |
 
-**Recommendation**: Start với **Semgrep + PMD** - cả hai đều chạy trên source code, không cần compile.
+**Recommendation**: Start với **Semgrep + PMD (includes CPD)** - cả hai đều chạy trên source code, không cần compile.
 
 ---
 
@@ -277,6 +303,49 @@ grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.java"
 
 ---
 
+## Tested Commands (Real-world)
+
+Các commands đã được test thực tế:
+
+### Semgrep (tested on Windows + Git Bash)
+```bash
+# Scan một folder với Java rules
+semgrep --config "p/java" --json -o ./tools/reports/semgrep-report.json ./src/main/java/
+
+# Scan với security rules
+semgrep --config "p/owasp-top-ten" ./src/
+
+# Expected output: "Ran X rules on Y files: Z findings"
+```
+
+### PMD (tested on Windows)
+```bash
+# Windows - dùng .bat
+./tools/pmd-bin-7.0.0/bin/pmd.bat check -d ./src/main/java -R rulesets/java/quickstart.xml -f json -r ./tools/reports/pmd-report.json
+
+# Unix/Mac
+./tools/pmd-bin-7.0.0/bin/pmd check -d ./src/main/java -R rulesets/java/quickstart.xml -f json -r ./tools/reports/pmd-report.json
+
+# Expected: Processing files 100% [...] Violations: XX, Errors: 0
+```
+
+### Sample PMD Output (37 violations on 15 files)
+```json
+{
+  "files": [
+    {
+      "filename": "EWSpinWheelUseCaseImpl.java",
+      "violations": [
+        {"rule": "GuardLogStatement", "priority": 2, "description": "Logger calls should be surrounded by log level guards."},
+        {"rule": "PackageCase", "priority": 3, "description": "Package name contains upper case characters"}
+      ]
+    }
+  ]
+}
+```
+
+---
+
 ## Output
 
 After install, report:
@@ -285,11 +354,39 @@ After install, report:
 
 | Tool | Status | Version | Path |
 |------|--------|---------|------|
-| Semgrep | ✅ Installed | 1.50.0 | pip |
+| Semgrep | ✅ Installed | 1.151.0 | pip (check PATH on Windows) |
 | PMD | ✅ Installed | 7.0.0 | ./tools/pmd-bin-7.0.0 |
 | SpotBugs | ⚠️ Skipped | - | Needs compiled classes |
 | Checkstyle | ✅ Installed | 10.12.5 | ./tools/checkstyle.jar |
 
 Ready to run: Semgrep, PMD, Checkstyle
 Not available: SpotBugs (no .class files)
+```
+
+---
+
+## Troubleshooting
+
+### "semgrep: command not found" (Windows)
+```powershell
+# Semgrep installed nhưng không trong PATH
+# Solution: Add Scripts folder to PATH
+$scriptsPath = Get-ChildItem -Path "$env:LOCALAPPDATA\Packages" -Filter "PythonSoftwareFoundation.Python*" -Directory |
+    Select-Object -First 1 |
+    ForEach-Object { Join-Path $_.FullName "LocalCache\local-packages\Python312\Scripts" }
+$env:PATH += ";$scriptsPath"
+```
+
+### "pmd.bat: command not found"
+```bash
+# Dùng full path
+./tools/pmd-bin-7.0.0/bin/pmd.bat --version
+```
+
+### PMD "No rules found"
+```bash
+# Dùng built-in ruleset
+-R rulesets/java/quickstart.xml   # Basic rules
+-R rulesets/java/errorprone.xml   # Error-prone rules
+-R category/java/bestpractices.xml # Best practices
 ```

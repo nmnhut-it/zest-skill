@@ -167,6 +167,23 @@ Nếu nghi ngờ AI-generated:
 | Shallow Error Handling | `catch (Exception) + RuntimeException` | 5x higher |
 | Missing Edge Cases | No null/boundary tests | Common |
 
+**Run CPD (Copy-Paste Detector):**
+```bash
+# Windows
+./tools/pmd-bin-7.0.0/bin/pmd.bat cpd --minimum-tokens 50 -d ./src --language java
+
+# Unix/Mac
+./tools/pmd-bin-7.0.0/bin/pmd cpd --minimum-tokens 50 -d ./src --language java
+
+# Output format options: text, csv, xml, json
+./tools/pmd-bin-7.0.0/bin/pmd cpd --minimum-tokens 50 -d ./src --language java --format json
+```
+
+**CPD Thresholds:**
+- `--minimum-tokens 100`: Strict (only large duplicates)
+- `--minimum-tokens 50`: Moderate (recommended)
+- `--minimum-tokens 25`: Aggressive (many false positives)
+
 ---
 
 ## Phase 3: Aggregation
