@@ -77,8 +77,8 @@ $env:PATH += ";$(python -c "import subprocess;r=subprocess.run(['pip','show','se
 
 **Alternative - Use helper script:**
 ```bash
-# Windows: scripts/find-semgrep.bat run --version
-# Unix:    scripts/find-semgrep.sh run --version
+# Windows: skills/find-semgrep.bat run --version
+# Unix:    skills/find-semgrep.sh run --version
 ```
 
 **Verify:**
@@ -384,8 +384,8 @@ $env:PATH += ";$(python -c "import subprocess;r=subprocess.run(['pip','show','se
 
 **Or use helper script:**
 ```bash
-scripts/find-semgrep.bat run --version   # Windows
-scripts/find-semgrep.sh run --version    # Unix
+skills/find-semgrep.bat run --version   # Windows
+skills/find-semgrep.sh run --version    # Unix
 ```
 
 ### "pmd.bat: command not found"

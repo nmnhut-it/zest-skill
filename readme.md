@@ -58,7 +58,7 @@ export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show'
 $env:PATH += ";$(python -c "import subprocess; r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True); loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0]; print(loc.replace('site-packages','Scripts'))")"
 ```
 
-Or use helper scripts: `scripts/find-semgrep.bat run --version`
+Or use helper scripts: `skills/find-semgrep.bat run --version`
 
 </details>
 
