@@ -1,0 +1,55 @@
+{
+  "name": "zest-skill",
+  "version": "1.0.0",
+  "description": "AdaBoost-inspired code quality analysis skills for LLM agents (Claude Code, Cursor, VS Code)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nmnhut-it/zest-skill.git"
+  },
+  "homepage": "https://github.com/nmnhut-it/zest-skill#readme",
+  "bugs": {
+    "url": "https://github.com/nmnhut-it/zest-skill/issues"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "skills",
+    "code-review",
+    "code-quality",
+    "test-generation",
+    "security-audit",
+    "llm",
+    "agent",
+    "claude",
+    "cursor",
+    "adaboost",
+    "static-analysis",
+    "semgrep",
+    "pmd",
+    "spotbugs"
+  ],
+  "author": "nmnhut-it",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "CLAUDE.md",
+    "INSTALL.md"
+  ]
+}
