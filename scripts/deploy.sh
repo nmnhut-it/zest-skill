@@ -24,6 +24,7 @@ echo
 echo "Updating files from master..."
 git checkout master -- CLAUDE.md
 git checkout master -- skills/
+git checkout master -- prompts/
 git checkout master -- scripts/install-zest-skill.sh
 git checkout master -- scripts/install-zest-skill.bat
 

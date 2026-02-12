@@ -30,6 +30,7 @@ echo.
 echo Updating files from master...
 git checkout master -- CLAUDE.md
 git checkout master -- skills/
+git checkout master -- prompts/
 
 REM Check if there are changes
 git diff --staged --quiet
