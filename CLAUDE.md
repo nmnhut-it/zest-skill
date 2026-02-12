@@ -25,9 +25,20 @@ Nếu project có file `experience.md`, đọc trước khi review để biết 
 
 ## Tools Installation (No Maven Required!)
 
-### Quick Install (LLM tự chạy)
+### Semgrep (required, pip install)
 
-**PMD** (works on source code, no compile):
+```bash
+pip install semgrep
+```
+
+**If "semgrep: command not found" after install, run this ONCE:**
+```bash
+# Bash/Git Bash (Windows) - auto-detect and add to PATH
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
+
+### PMD (works on source code, no compile)
+
 ```bash
 # Windows PowerShell
 Invoke-WebRequest -Uri "https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.0.0/pmd-dist-7.0.0-bin.zip" -OutFile pmd.zip
