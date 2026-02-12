@@ -19,7 +19,7 @@ export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show'
 ### 1. Đọc Test File
 
 ```
-Read test file và source file được test (SUT - System Under Test)
+Read test file và source file được test (SUT - System Under Test) và docs
 ```
 
 ### 2. Static Analysis với PMD
