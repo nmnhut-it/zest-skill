@@ -1,6 +1,6 @@
 # Zest Skill
 
-Bộ kỹ năng phân tích chất lượng code cho LLM (Claude Code, Cursor, VS Code), lấy cảm hứng từ thuật toán AdaBoost.
+Bộ kỹ năng phân tích chất lượng code cho LLM (Claude Code, Cursor, VS Code).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -43,54 +43,33 @@ generate test cho src/MyService.java
 
 ### Vấn đề
 
-Các công cụ review code truyền thống chạy 1 lần rồi báo kết quả. Nhưng:
-- Mỗi tool có điểm mù (PMD bỏ sót cái SpotBugs bắt được)
-- Không ưu tiên vùng code nguy hiểm
-- Tool tĩnh không phát hiện được "mùi code AI"
+AI review code rất mạnh, nhưng có đặc tính:
+- **Bắt giỏi**: Logic errors, business rule violations, design issues
+- **Hay bỏ sót**: Code style, naming conventions, security patterns cơ bản
 
-### Giải pháp: Phân tích đa vòng kiểu AdaBoost
+### Giải pháp
 
-Lấy ý tưởng từ thuật toán AdaBoost: **mỗi vòng tập trung vào những gì vòng trước BỎ SÓT**.
+**1. Static tools bù đắp điểm mù của AI**
+
+| Tool | Phát hiện |
+|------|-----------|
+| **PMD** | Code style, naming, best practices |
+| **CPD** | Code copy-paste (đặc biệt code AI sinh ra) |
+| **Semgrep** | SQL injection, XSS, OWASP Top 10 |
+
+**2. AI chạy nhiều vòng, mỗi vòng tập trung 1 loại lỗi**
 
 ```
-Vòng 1 (Static Tools)  →  Vòng 2 (AI Focus)  →  Vòng 3 (Deep)
-         ↓                       ↓                    ↓
-     PMD, CPD               Vùng chưa bị          Security
-     Semgrep                "soi" ở Vòng 1        Performance
-                                                  AI-smell
+Vòng 1: Static tools (PMD, Semgrep) → bắt lỗi cơ bản
+Vòng 2: AI tập trung vùng chưa bị flag → logic, business rules
+Vòng 3: AI đào sâu → security, performance, edge cases
 ```
 
-### Công cụ sử dụng
+Thay vì yêu cầu AI "review tất cả", chia nhỏ thành các vòng chuyên biệt giúp AI tập trung hơn và bắt được nhiều lỗi hơn.
 
-| Tool | Là gì | Phát hiện |
-|------|-------|-----------|
-| **PMD** | Phân tích mã nguồn Java | Code style, best practices, code smell |
-| **CPD** | Copy-Paste Detector (trong PMD) | Code bị copy-paste, đặc biệt code AI sinh ra |
-| **Semgrep** | Pattern matching cho security | SQL injection, XSS, secrets, OWASP Top 10 |
-
-### Ý tưởng chính
-
-**1. Tập trung vào vùng chưa được "soi"**
-- Vòng 1: các tool tĩnh quét toàn bộ code, đánh dấu dòng đã kiểm tra
-- Vòng 2: AI tập trung review những dòng mà Vòng 1 KHÔNG phát hiện vấn đề
-- Lý do: code "trông sạch" với tool tĩnh có thể chứa lỗi logic, business rule sai
-
-**2. Độ tin cậy tăng khi nhiều tool cùng phát hiện**
-- 1 tool phát hiện → bình thường
-- 2 tools phát hiện → tin cậy cao
-- 3 tools phát hiện → xác nhận chắc chắn
-
----
-
-## Phương pháp
-
-| Pha | Mô tả |
-|-----|-------|
-| **1. Khởi tạo** | Đọc file, xác định độ phức tạp từng method |
-| **2. Vòng 1 (Static)** | Chạy PMD, CPD, Semgrep → đánh dấu dòng đã kiểm tra |
-| **3. Vòng 2 (AI Review)** | AI tập trung review vùng chưa bị flag, kiểm tra logic |
-| **4. Vòng 3 (Deep)** | Đào sâu security, performance, phát hiện code AI |
-| **5. Báo cáo** | Tổng hợp findings, ưu tiên issue được nhiều tool xác nhận |
+**3. Độ tin cậy tăng khi nhiều nguồn cùng phát hiện**
+- 1 nguồn phát hiện → kiểm tra lại
+- 2+ nguồn phát hiện → xác nhận chắc chắn
 
 ---
 
