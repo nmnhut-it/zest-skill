@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(dir /s \"d:\\\\Gitlab\\\\zest-skill\")",
-      "Bash(npm run build:*)"
-    ]
-  }
-}
