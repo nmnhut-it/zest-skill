@@ -18,23 +18,24 @@ Nếu project có file `experience.md`, đọc trước khi review để biết 
 
 ## How to Use Skills
 
-1. **FIRST**: Check if tools are installed, if not → run `skills/auto-install.md`
-2. Đọc skill file tương ứng với user request
-3. Follow step-by-step instructions
-4. Output theo format định nghĩa
+1. **FIRST (Windows only)**: Run PATH setup below
+2. Check if tools are installed, if not → run `skills/auto-install.md`
+3. Đọc skill file tương ứng với user request
+4. Follow step-by-step instructions
+5. Output theo format định nghĩa
+
+## Windows PATH Setup (REQUIRED - run ONCE per session)
+
+**Run this BEFORE any semgrep command:**
+```bash
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
 
 ## Tools Installation (No Maven Required!)
 
-### Semgrep (required, pip install)
-
+### Semgrep (required)
 ```bash
 pip install semgrep
-```
-
-**If "semgrep: command not found" after install, run this ONCE:**
-```bash
-# Bash/Git Bash (Windows) - auto-detect and add to PATH
-export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
 ```
 
 ### PMD (works on source code, no compile)

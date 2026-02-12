@@ -5,6 +5,12 @@
 - User muốn "boost", "thorough review", "deep check"
 - User cần comprehensive analysis với high confidence
 
+## Prerequisites (Windows)
+**Run ONCE per session before semgrep:**
+```bash
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
+
 ## Concept: AdaBoost-Inspired Iterative Analysis
 
 ```

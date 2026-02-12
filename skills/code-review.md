@@ -10,6 +10,11 @@ Kiểm tra tools có sẵn:
 - IntelliJ MCP: `get_file_problems`, `get_symbol_info`
 - Terminal: `mvn`, `gradle`, `semgrep`, `git`
 
+**Windows PATH (run ONCE per session before semgrep):**
+```bash
+export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
+```
+
 ---
 
 ## Execution Steps
