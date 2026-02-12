@@ -57,15 +57,21 @@ AI review code rất mạnh, nhưng có đặc tính:
 | **CPD** | Code copy-paste (đặc biệt code AI sinh ra) |
 | **Semgrep** | SQL injection, XSS, OWASP Top 10 |
 
-**2. AI chạy nhiều vòng, mỗi vòng tập trung 1 loại lỗi**
+**2. AI chạy nhiều vòng, mỗi vòng CHỈ tập trung 1 loại lỗi**
+
+> 💡 **Lấy cảm hứng từ [AdaBoost](https://en.wikipedia.org/wiki/AdaBoost)**: Thuật toán ensemble learning kết hợp nhiều "weak learners" thành một "strong learner". Điều kiện: mỗi weak learner có accuracy > 50% (tốt hơn random) và các learners bổ sung cho nhau (cover những gì learner khác bỏ sót).
+
+Tương tự, thay vì yêu cầu AI "review tất cả" (dễ bỏ sót), ta chia thành nhiều pass chuyên biệt:
 
 ```
-Vòng 1: Static tools (PMD, Semgrep) → bắt lỗi cơ bản
-Vòng 2: AI tập trung vùng chưa bị flag → logic, business rules
-Vòng 3: AI đào sâu → security, performance, edge cases
+Pass 1: Static Tools  → PMD, Semgrep
+Pass 2: AI Security   → SQL injection, XSS, secrets, input validation
+Pass 3: AI Logic      → Null safety, business rules, error handling
+Pass 4: AI Resources  → Resource leaks, N+1 queries, performance
+Pass 5: AI Structure  → Architecture, layer separation, design patterns
 ```
 
-Thay vì yêu cầu AI "review tất cả", chia nhỏ thành các vòng chuyên biệt giúp AI tập trung hơn và bắt được nhiều lỗi hơn.
+Mỗi pass là một "weak learner" - chỉ focus 1 việc nhưng làm tốt. Kết hợp lại → review toàn diện, ít hallucination.
 
 **3. Độ tin cậy tăng khi nhiều nguồn cùng phát hiện**
 - 1 nguồn phát hiện → kiểm tra lại
@@ -77,7 +83,7 @@ Thay vì yêu cầu AI "review tất cả", chia nhỏ thành các vòng chuyên
 
 | Trigger | Skill | Mô tả |
 |---------|-------|-------|
-| "review code" | `code-review.md` | Review code với PMD, Semgrep + AI |
+| "review code" | `code-review.md` | Multi-pass review với PMD, Semgrep + AI |
 | "review test" | `test-review.md` | Đánh giá chất lượng test |
 | "generate test" | `test-generation.md` | Sinh test JUnit 5 |
 

@@ -13,8 +13,7 @@ Verify project có:
 - [ ] Mockito (mockito-core)
 - [ ] AssertJ (assertj-core) - recommended
 - [ ] JaCoCo plugin configured
-
-Nếu thiếu → hướng dẫn user thêm vào pom.xml/build.gradle.
+- [ ] Testcontainers (optional, cho integration test)
 
 ---
 
@@ -30,42 +29,122 @@ Nếu thiếu → hướng dẫn user thêm vào pom.xml/build.gradle.
 5. Check coverage baseline nếu có JaCoCo
 ```
 
-**Coverage baseline:**
-```bash
-mvn test jacoco:report -pl <module>
-# Read: target/site/jacoco/jacoco.xml
+### Step 2: Chọn Test Strategy
+
+**QUAN TRỌNG: Tránh over-mocking!**
+
+| Situation | Strategy |
+|-----------|----------|
+| Pure logic (no deps) | Unit test, không mock |
+| External deps (DB, API) | Mock hoặc Testcontainers |
+| Complex integration | Testcontainers với real DB |
+| Time-dependent | Inject Clock, stub time |
+
+**Khi nào dùng Testcontainers thay mock:**
+```java
+// BAD - TestRepo không catch bug của real Couchbase SDK
+class TestRepo extends RealRepo {
+    ConcurrentHashMap<String, String> data;
+    // SDK thật throw DocumentNotFoundException, fake trả null
+}
+
+// GOOD - Testcontainers với real DB
+@Container
+static CouchbaseContainer couchbase = new CouchbaseContainer("couchbase:7.2.4");
 ```
 
-### Step 2: Test Categories (viết theo thứ tự)
+### Step 3: Refactor for Testability (nếu cần)
 
-| Priority | Category | Description |
-|----------|----------|-------------|
-| 1 | Happy Path | Normal input, expected output |
-| 2 | Null/Empty | Null params, empty strings, empty collections |
-| 3 | Boundary | 0, -1, MAX_VALUE, empty vs single item |
-| 4 | Error Cases | Exceptions, invalid state |
-| 5 | Edge Cases | Concurrent access, large data |
+Nếu code khó test → prompt AI refactor TRƯỚC khi viết test:
 
-**Từ Monitoring Code Quality insights:**
-- Test cơ bản đúng flow (ứng với client)
-- Test ngoại lệ (tool sửa gói tin, client gửi sai)
-- Test theo kịch bản (VD: user nhận 7 phần quà trong 7 ngày)
+```java
+// BEFORE - phải mock static getInstance()
+long now = TimeProvider.getInstance().getMillis();
 
-### Step 3: Generate Test Code
+// AFTER - inject Clock, dễ test
+class TimeProvider {
+    private Clock clock;
 
-**Framework:** JUnit 5 + Mockito + AssertJ
+    void stubTime(long millis) { clock.setMillis(millis); }
+    void resetStub() { clock.reset(); }
+}
+```
 
-**Naming Convention:**
-- Class: `XxxTest` trong `src/test/java/` mirror package
-- Method: `should_<expected>_when_<condition>()`
+**Pattern: Tách logic ra hàm pure**
+```java
+// BEFORE - phải mock DB để test
+bool isInEventTime() {
+    loadEventTimeFromDB();  // DB call
+    return start <= now && now <= end;
+}
 
-**Structure Template:**
+// AFTER - tách thành 2 tests
+void loadEventTimeFromDB();  // Test với Testcontainers
+bool isInEventTime(long start, long end, long now);  // Test logic thuần
+```
+
+### Step 4: Test Categories
+
+| Priority | Category | Ví dụ |
+|----------|----------|-------|
+| 1 | **Cơ bản** (happy path) | User flow bình thường |
+| 2 | **Ngoại lệ** (tampered input) | Client gửi gói tin sai, tool sửa packet |
+| 3 | **Kịch bản** (scenario) | User nhận 7 phần quà trong 7 ngày |
+| 4 | **Boundary** | 0, -1, MAX_VALUE, empty |
+| 5 | **Edge Cases** | Concurrent, large data |
+
+**Test Matrix cho case coverage:**
+```
+Method: calculateDiscount(amount, userType, isFirstPurchase)
+
+| amount | userType | isFirstPurchase | expected |
+|--------|----------|-----------------|----------|
+| 100    | REGULAR  | true            | 10%      |
+| 100    | REGULAR  | false           | 0%       |
+| 100    | VIP      | true            | 20%      |
+| 100    | VIP      | false           | 15%      |
+| 0      | any      | any             | 0%       |
+| -1     | any      | any             | ERROR    |
+```
+
+### Step 5: Handle Non-Deterministic Tests
+
+**Time-dependent tests:**
+```java
+// BAD - fail vào tháng 2 năm nhuận
+@Test void testMonthlyCount() {
+    assertEquals(28, service.getDaysInMonth()); // Đôi khi 29!
+}
+
+// GOOD - fix cứng thời gian
+@Test void testMonthlyCount() {
+    TimeProvider.getInstance().stubTime(
+        LocalDate.of(2024, 1, 15).toEpochDay() * 86400000
+    );
+    assertEquals(31, service.getDaysInMonth());
+}
+```
+
+**Shared state tests:**
+```java
+// BAD - test này làm nhiễu test khác
+static User sharedUser;
+
+@Test void test1() { sharedUser = create(); }
+@Test void test2() { update(sharedUser); }  // Fail nếu test1 chưa chạy
+
+// GOOD - mỗi test độc lập
+@BeforeEach void setup() { user = createTestUser(); }
+```
+
+### Step 6: Generate Test Code
+
+**Template:**
 ```java
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
     @Mock private UserRepository userRepository;
-    @Mock private EmailService emailService;
     @InjectMocks private UserService userService;
 
     @Nested
@@ -74,147 +153,87 @@ class UserServiceTest {
 
         @Test
         @DisplayName("should create user when valid input")
-        void should_create_user_when_valid_input() {
+        void should_create_when_valid() {
             // Arrange
             var request = new CreateUserRequest("John", "john@example.com");
-            var savedUser = new User(1L, "John", "john@example.com");
-            when(userRepository.existsByEmail(anyString())).thenReturn(false);
-            when(userRepository.save(any(User.class))).thenReturn(savedUser);
+            when(userRepository.save(any())).thenReturn(savedUser);
 
             // Act
             var result = userService.createUser(request);
 
-            // Assert
+            // Assert - PHẢI có meaningful assertion
             assertThat(result.getName()).isEqualTo("John");
-            assertThat(result.getEmail()).isEqualTo("john@example.com");
-            verify(userRepository).save(any(User.class));
-        }
-
-        @Test
-        @DisplayName("should throw when email already exists")
-        void should_throw_when_email_exists() {
-            // Arrange
-            when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
-
-            // Act & Assert
-            assertThatThrownBy(() -> userService.createUser(request))
-                .isInstanceOf(EmailExistsException.class)
-                .hasMessageContaining("john@example.com");
+            verify(userRepository).save(any());
         }
     }
 }
 ```
 
-**RULES:**
-- Mỗi test method test ĐÚNG 1 behavior
-- PHẢI có meaningful assertions (KHÔNG chỉ verify no exception)
-- Mock ALL external dependencies (DB, HTTP, File I/O)
-- KHÔNG mock class đang test
-- Dùng `@Nested` group theo method
-- Spring Boot: `@WebMvcTest`, `@DataJpaTest` cho integration
-
-### Step 4: Compile Check + Self-Heal
+### Step 7: Compile + Run + Self-Heal
 
 ```bash
-mvn test-compile -pl <module>
+mvn test -Dtest=<TestClassName>
 ```
 
-**Auto-fix errors:**
-| Error Type | Fix |
-|------------|-----|
-| Import not found | Check actual class names, fix import |
-| Method not found | Use `get_symbol_info` verify signature |
-| Type mismatch | Check actual return types |
-| Mockito setup wrong | Verify mock returns đúng type |
-| Cannot access private | Test qua public API |
+**Auto-fix loop (max 3 rounds):**
+1. Run test
+2. Parse errors
+3. Fix và retry
 
-Retry compile tối đa 3 lần.
+| Error | Fix |
+|-------|-----|
+| Import not found | Check actual class names |
+| Method not found | Verify signature với source |
+| Mock setup wrong | Check return types |
 
-### Step 5: Run Tests + Measure Coverage
+### Step 8: Coverage Boosting
 
 ```bash
-mvn test -Dtest=<TestClassName> jacoco:report -pl <module>
+mvn test jacoco:report
+# Parse: target/site/jacoco/jacoco.xml
 ```
 
-Record:
-- Tests pass: X/Y
-- Tests fail: list failures + root cause
-- Line coverage: XX%
-- Branch coverage: XX%
-
-### Step 6: Boosting Loop (nếu coverage < target)
-
-**Round N:**
-1. Parse JaCoCo XML → tìm uncovered lines:
-```xml
-<line nr="XX" mi="Y"/> <!-- mi > 0 = missed instructions -->
-```
-
-2. Map uncovered lines → source code:
-   - Method nào chưa test?
-   - Branch nào chưa test? (if/else, switch, try/catch)
-   - Edge case nào miss?
-
-3. Generate THÊM tests CHỈ cho phần chưa covered
-
-4. Compile + Run lại → đo delta coverage
-
-**Stop boosting khi:**
-- Coverage đạt target (70-80%)
+**Stop khi:**
+- Coverage đạt 70-80%
 - Delta < 3% (diminishing returns)
-- Đã 3 rounds (max)
-- Uncovered lines là unreachable code
-
-### Step 7: Quality Check
-
-Review tests đã gen:
-- [ ] Test chỉ check "no exception thrown"? → xóa hoặc thêm assertion
-- [ ] Test duplicate logic? → merge
-- [ ] Flaky pattern? (time, random, external state) → fix
-- [ ] Test names descriptive? → improve
-
----
-
-## Output Format
-
-```
-## Test Generation Report: [ClassName]
-
-### Generated Tests
-- Total: X tests
-- File: src/test/java/.../XxxTest.java
-
-### Coverage
-| Metric | Before | After | Delta |
-|--------|--------|-------|-------|
-| Line | X% | Y% | +Z% |
-| Branch | X% | Y% | +Z% |
-
-### Test Summary
-| Method | Tests | Coverage |
-|--------|-------|----------|
-| methodA | 3 | 100% |
-| methodB | 2 | 85% |
-
-### Uncovered (reason)
-- Line 45-50: Dead code (unreachable)
-- Line 72: Private helper
-
-### Boosting Rounds
-- Round 1: +15% (added boundary tests)
-- Round 2: +8% (added error cases)
-- Round 3: +3% (diminishing returns, stopped)
-```
+- Đã 3 rounds
+- Uncovered = unreachable code
 
 ---
 
 ## Anti-Patterns to Avoid
 
-| Pattern | Why Bad |
-|---------|---------|
-| Test only verifies mock calls | Tests mocks, not code |
-| No assertions | Coverage filler |
-| Testing private methods | Couples to implementation |
-| Mocking value objects | Over-mocking |
-| Generic test names | Hard to understand failures |
-| 100+ lines setup | Maintenance nightmare |
+| Pattern | Why Bad | Fix |
+|---------|---------|-----|
+| Mock quá nhiều | Test mocks, không test code | Refactor for testability |
+| Test only verify() | Không assert kết quả | Thêm meaningful assertions |
+| Fake implementation | Không catch real bugs | Dùng Testcontainers |
+| Test impl khác | Test ConcurrentHashMap thay Couchbase | Test real dependency |
+| Generic names | testMethod1() | should_X_when_Y() |
+| Time-dependent | Fail random | Stub Clock |
+
+---
+
+## Output Format
+
+```markdown
+## Test Generation: [ClassName]
+
+### Strategy
+- Unit test với mock: X methods
+- Integration test với Testcontainers: Y methods
+- Refactored for testability: Z methods
+
+### Generated Tests
+- Total: N tests
+- File: src/test/java/.../XxxTest.java
+
+### Coverage
+| Metric | Before | After |
+|--------|--------|-------|
+| Line   | X%     | Y%    |
+| Branch | X%     | Y%    |
+
+### Test Matrix
+[Include for complex methods]
+```
