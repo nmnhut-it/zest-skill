@@ -1,148 +1,201 @@
 # Code Review Skill
 
 ## Trigger
-- User yêu cầu review code, review file, review PR/MR
-- User hỏi "code này có vấn đề gì không"
-- User yêu cầu check quality
+- "review code", "check code"
+- "code này có vấn đề gì không"
 
 ## Prerequisites
-Kiểm tra tools có sẵn:
-- IntelliJ MCP: `get_file_problems`, `get_symbol_info`
-- Terminal: `mvn`, `gradle`, `semgrep`, `git`
 
-**Windows PATH (run ONCE per session before semgrep):**
+**Windows PATH (run ONCE per session):**
 ```bash
 export PATH="$PATH:$(python -c "import subprocess;r=subprocess.run(['pip','show','semgrep'],capture_output=True,text=True);loc=[l.split(': ',1)[1] for l in r.stdout.split('\n') if l.startswith('Location:')][0];p=loc.replace('site-packages','Scripts').replace(chr(92),'/');print('/'+p[0].lower()+p[2:] if len(p)>1 and p[1]==':' else p)")"
 ```
 
 ---
 
-## Execution Steps
+## Concept: Multi-Pass Review
 
-### Step 1: Thu thập Context
-```
-1. Đọc file cần review
-2. Xem project dependencies (Maven/Gradle)
-3. Nếu review PR: chạy `git diff main..HEAD -- <file_path>`
-4. Tìm related files (imports, usages)
-```
+AI review 1 lần dễ bỏ sót. Chia thành nhiều pass nhỏ, mỗi pass focus 1 loại lỗi:
 
-### Step 2: Static Analysis
-
-#### 2.1 IntelliJ Inspections (nếu có MCP)
 ```
-Tool: get_file_problems(<file_path>)
-→ 600+ inspections: null analysis, resource leak, unused code, type mismatch
+Pass 1: Static Tools    → PMD, Semgrep (catch style, security cơ bản)
+Pass 2: AI - Security   → Focus CHỈ security issues
+Pass 3: AI - Logic      → Focus CHỈ business logic, null safety
+Pass 4: AI - Resources  → Focus CHỈ resource leaks, performance
+Pass 5: AI - Structure  → Focus CHỈ architecture, design
 ```
 
-#### 2.2 SpotBugs (bytecode analysis)
+**Sau mỗi pass:** Đánh dấu lines đã có findings → pass sau focus vào vùng chưa bị flag.
+
+---
+
+## Execution
+
+### Pass 1: Static Analysis
+
+#### 1.1 PMD + CPD
 ```bash
-mvn spotbugs:check -Dspotbugs.xmlOutput=true -Dspotbugs.effort=Max
-# Parse: target/spotbugsXml.xml
+./tools/pmd-bin-7.0.0/bin/pmd check -d <file> -R rulesets/java/quickstart.xml -f json
+./tools/pmd-bin-7.0.0/bin/pmd cpd --minimum-tokens 50 -d ./src --language java
 ```
 
-#### 2.3 PMD (source analysis)
-```bash
-mvn pmd:check -Dformat=xml
-# Parse: target/pmd.xml
-```
-
-#### 2.4 Semgrep (security + patterns)
+#### 1.2 Semgrep
 ```bash
 semgrep --config "p/java" --config "p/owasp-top-ten" --json <file>
 ```
 
-### Step 3: AI Semantic Review
+#### 1.3 IntelliJ MCP (nếu có)
+```
+get_file_problems(<file_path>)
+```
 
-#### 3.1 Security Checklist
-- [ ] SQL injection, XSS, path traversal
+**→ Ghi nhận:** Lines có findings từ static tools.
+
+---
+
+### Pass 2: AI - Security Focus
+
+**CHỈ tập trung security, KHÔNG nghĩ về cái khác:**
+
+- [ ] SQL injection (string concat trong query?)
+- [ ] XSS (user input → response?)
+- [ ] Path traversal (user input trong file path?)
+- [ ] Command injection (Runtime.exec với input?)
 - [ ] Hardcoded secrets/credentials
 - [ ] Unsafe deserialization
-- [ ] SSRF vulnerabilities
+- [ ] Missing input validation
+- [ ] Sensitive data trong logs
 
-#### 3.2 Null Safety
-- [ ] Optional usage đúng cách
+**→ Ghi nhận:** Lines có security issues.
+
+---
+
+### Pass 3: AI - Logic & Null Safety Focus
+
+**CHỈ tập trung logic, KHÔNG nghĩ về security:**
+
+- [ ] Business logic đúng requirements?
+- [ ] Edge cases được handle?
 - [ ] Null checks ở boundaries
-- [ ] @NonNull/@Nullable annotations
+- [ ] Chain calls có thể NPE: `user.getProfile().getAddress()`
+- [ ] Optional usage đúng cách
+- [ ] Race conditions trong shared state
+- [ ] Error handling: catch specific, không empty
 
-#### 3.3 Resource Management
-- [ ] try-with-resources cho I/O
+**→ Ghi nhận:** Lines có logic issues.
+
+---
+
+### Pass 4: AI - Resource & Performance Focus
+
+**CHỈ tập trung resources, KHÔNG nghĩ về logic:**
+
+- [ ] try-with-resources cho I/O, streams
 - [ ] Connection closing (DB, HTTP)
-- [ ] Stream closing
-
-#### 3.4 Concurrency
-- [ ] Race conditions
-- [ ] Thread safety của shared state
-- [ ] Deadlock potential
-
-#### 3.5 Error Handling
-- [ ] Catch blocks không empty
-- [ ] Exception specificity (không catch Exception)
-- [ ] Error recovery logic
-
-#### 3.6 Performance
-- [ ] N+1 queries
-- [ ] Unnecessary object creation trong loops
+- [ ] N+1 queries (loop với DB call)
+- [ ] Object creation trong loops
+- [ ] String concat trong loops (`+=`)
 - [ ] Blocking I/O trong async context
 
-#### 3.7 Design
-- [ ] Single Responsibility adherence
-- [ ] Dependency injection usage
-- [ ] Interface segregation
+**→ Ghi nhận:** Lines có resource/perf issues.
 
-### Step 4: AI-Generated Code Smells
-Nếu code là AI-generated, check thêm:
+---
 
+### Pass 5: AI - Structure & Design Focus
+
+**CHỈ tập trung architecture:**
+
+#### File/Class Size
+| Metric | Warning |
+|--------|---------|
+| File > 500 lines | Tách nhỏ |
+| Method > 30 lines | Extract methods |
+
+#### Layer Separation
+```
+BAD: Scene → Manager → Controller → Manager (đan xen)
+GOOD: Scene → Controller → Services → Model (rõ ràng)
+```
+
+#### AI Code Smells
 | Pattern | Detection |
 |---------|-----------|
-| Excessive Duplication | PMD CPD, 8x higher than human code |
-| Hallucinated APIs | `get_file_problems` shows unresolved references |
-| Over-engineering | Abstract class với 1 impl, unnecessary generics |
-| Shallow Error Handling | `catch (Exception e) { log; throw RuntimeException }` |
-| Missing Edge Cases | No null/empty/boundary tests |
-| Verbose but Shallow | Long code with little substance |
+| Duplication | CPD > 50 tokens |
+| Hallucinated APIs | Unresolved references |
+| Over-engineering | Interface với 1 impl |
+| Magic Numbers | Hardcoded values |
 
-### Step 5: Code Structure Review
-Từ victory_wheel notes:
-- [ ] File size reasonable (< 500 lines)
-- [ ] Clear separation: Model / View / Controller
-- [ ] No flow đan xen giữa layers
-- [ ] Magic numbers có comments
-- [ ] TypeScript/strong typing thay vì @typedef
+---
+
+### Pass 6: Logging Quality (optional)
+
+- [ ] Log format chuẩn (parseable)
+- [ ] Log cả success VÀ error
+- [ ] Error codes rõ ràng
+- [ ] Không log sensitive data
+
+```java
+// BAD
+log.error("Error");
+
+// GOOD
+log.error("Payment failed: userId={}, errorCode={}", userId, code, e);
+```
+
+---
+
+## Aggregation
+
+### Confidence từ Multi-Pass
+| Detected by | Confidence |
+|-------------|------------|
+| 1 pass | 70% - kiểm tra lại |
+| 2 passes | 90% - likely real |
+| 3+ passes | 98% - confirmed |
+
+### Priority
+```
+CRITICAL: Security issues
+HIGH: Logic bugs, resource leaks
+MEDIUM: Performance, design
+LOW: Style, suggestions
+```
 
 ---
 
 ## Output Format
 
-```
+```markdown
 ## Code Review: [FileName]
 **Score**: X/10
 **Verdict**: [Pass / Needs Work / Critical Issues]
 
+### Pass Summary
+| Pass | Focus | Findings |
+|------|-------|----------|
+| 1 Static | PMD, Semgrep | X issues |
+| 2 Security | AI | Y issues |
+| 3 Logic | AI | Z issues |
+| 4 Resources | AI | W issues |
+| 5 Structure | AI | V issues |
+
+### Multi-Pass Confirmations (High Confidence)
+- [LINE XX] Detected by Pass 1 + 3 → 90% confidence
+
 ### Critical Issues (phải fix)
-- [LINE XX] [CATEGORY] Mô tả + code suggestion
+- [LINE XX] [SECURITY] SQL injection...
 
 ### Warnings (nên fix)
-- [LINE XX] [CATEGORY] Mô tả + code suggestion
+- [LINE XX] [LOGIC] Potential NPE...
 
-### Suggestions (nice to have)
-- Mô tả improvement
-
-### Positive Notes
-- Điểm tốt của code
-
-### Static Analysis Summary
-- IntelliJ: X errors, Y warnings
-- SpotBugs: X findings
-- PMD: X findings
-- Semgrep: X findings
+### Suggestions
+- Consider extracting method at line XX
 ```
 
 ---
 
 ## Rules
-- KHÔNG list tất cả findings - chỉ những cái QUAN TRỌNG
-- LUÔN giải thích TẠI SAO đó là vấn đề
-- LUÔN đưa code suggestion cụ thể
-- Priority: Security > Bugs > Performance > Design > Style
-- Nếu IntelliJ đã báo → không lặp lại
+- Mỗi pass CHỈ focus 1 loại vấn đề
+- KHÔNG cố tìm tất cả trong 1 pass
+- Issues detected nhiều passes = high confidence
+- Priority: Security > Logic > Resources > Structure
