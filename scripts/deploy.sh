@@ -24,6 +24,8 @@ echo
 echo "Updating files from master..."
 git checkout master -- CLAUDE.md
 git checkout master -- skills/
+git checkout master -- scripts/install-zest-skill.sh
+git checkout master -- scripts/install-zest-skill.bat
 
 # Check if there are changes
 if ! git diff --staged --quiet; then
