@@ -40,6 +40,7 @@ Read test file và source file được test (SUT - System Under Test)
 | A4 | Test data giống production data | [ ] |
 | B1 | Test verify outcomes users care about | [ ] |
 | B2 | Test catch bugs mà users sẽ report | [ ] |
+| ** | **Các issues khác** phát hiện được | [ ] |
 
 **Red Flags:**
 - Test validate internal state không có business meaning
@@ -56,6 +57,7 @@ Read test file và source file được test (SUT - System Under Test)
 | C4 | Real objects cho domain models | [ ] |
 | D1 | Mock return values realistic | [ ] |
 | D2 | Mock failures simulate real errors | [ ] |
+| ** | **Các mocking issues khác** phát hiện được | [ ] |
 
 **Red Flags:**
 - Mock domain services/business logic
@@ -73,6 +75,7 @@ Read test file và source file được test (SUT - System Under Test)
 | G1 | Test name rõ scenario + expected outcome | [ ] |
 | G2 | Arrange-Act-Assert pattern clear | [ ] |
 | G3 | Test < 50 lines | [ ] |
+| ** | **Các maintainability issues khác** phát hiện được | [ ] |
 
 **Red Flags:**
 - Test break khi rename variables/methods
@@ -88,6 +91,7 @@ Read test file và source file được test (SUT - System Under Test)
 | I2 | Nếu xóa 1 line code, test có fail? | [ ] |
 | I3 | Assertions specific (không chỉ != null) | [ ] |
 | I4 | Test verify complete state changes | [ ] |
+| ** | **Các bug detection issues khác** phát hiện được | [ ] |
 
 **Red Flags:**
 - Test pass dù có obvious bugs
